@@ -165,10 +165,6 @@ impl ZetaFormat {
     }
 }
 
-fn empty_range() -> Range<usize> {
-    0..0
-}
-
 #[derive(Clone, Debug, PartialEq, Hash, Serialize, Deserialize)]
 #[serde(tag = "event")]
 pub enum Event {
@@ -176,9 +172,9 @@ pub enum Event {
         path: Arc<Path>,
         old_path: Arc<Path>,
         diff: String,
-        #[serde(default = "empty_range")]
+        #[serde(default)]
         old_range: Range<usize>,
-        #[serde(default = "empty_range")]
+        #[serde(default)]
         new_range: Range<usize>,
         predicted: bool,
         in_open_source_repo: bool,
