@@ -3,7 +3,7 @@ use buffer_diff::BufferDiff;
 use client::{Client, EditPredictionUsage, UserStore, global_llm_token};
 use cloud_api_client::LlmApiToken;
 use cloud_api_types::{
-    EditPredictionRecentFile, EditPredictionSettledKeptChars, EditPredictionTrigger,
+    EditPredictionRecentFile, EditPredictionSettledKeptChars,
     MAX_EDIT_PREDICTION_SETTLED_PER_REQUEST, OrganizationId, SubmitEditPredictionFeedbackBody,
     SubmitEditPredictionSettledBatchBody, SubmitEditPredictionSettledBody,
     SubmitEditPredictionSettledResponse, SubmitEditPredictionSettledSampleData,
@@ -597,7 +597,6 @@ impl std::ops::Deref for BufferEditPrediction<'_> {
 
 struct PendingPredictionCapture {
     request_id: EditPredictionId,
-    trigger: EditPredictionTrigger,
     edited_buffer_id: EntityId,
     editable_anchor_range: Range<Anchor>,
     editable_region_before_prediction: String,
@@ -616,7 +615,6 @@ struct PendingPredictionCapture {
 
 struct PendingPredictionCaptureSampleData {
     context_task: Task<Result<CapturedPredictionContext>>,
-    editable_path: Arc<Path>,
     editable_offset_range: Range<usize>,
     next_edit_cursor_offset: Option<usize>,
     future_edit_history_events: Vec<Arc<zeta_prompt::Event>>,
@@ -2120,7 +2118,6 @@ impl EditPredictionStore {
     pub(crate) fn enqueue_settled_prediction(
         &mut self,
         request_id: EditPredictionId,
-        trigger: EditPredictionTrigger,
         project: &Entity<Project>,
         edited_buffer: &Entity<Buffer>,
         edited_buffer_snapshot: &BufferSnapshot,
@@ -2177,13 +2174,9 @@ impl EditPredictionStore {
         let editable_anchor_range =
             edited_buffer_snapshot.anchor_range_inside(editable_offset_range.clone());
         let now = cx.background_executor().now();
-        let sample_data = if can_collect_data
-            && let Some(context_task) = context_task
-            && let Some(file) = edited_buffer_snapshot.file()
-        {
+        let sample_data = if can_collect_data && let Some(context_task) = context_task {
             Some(PendingPredictionCaptureSampleData {
                 context_task,
-                editable_path: file.path().as_std_path().into(),
                 editable_offset_range,
                 next_edit_cursor_offset: None,
                 future_edit_history_events: Vec::new(),
@@ -2198,7 +2191,6 @@ impl EditPredictionStore {
             .pending_prediction_captures
             .push(PendingPredictionCapture {
                 request_id,
-                trigger,
                 edited_buffer_id: edited_buffer.entity_id(),
                 editable_anchor_range,
                 editable_region_before_prediction,
@@ -2561,7 +2553,6 @@ async fn send_settled_batches(
             for (pending_capture, settled_editable_region) in done_batch {
                 let PendingPredictionCapture {
                     request_id,
-                    trigger,
                     editable_region_before_prediction,
                     predicted_editable_region,
                     ts_error_count_before_prediction,
@@ -2587,7 +2578,6 @@ async fn send_settled_batches(
                         repository_url: context.repository_url,
                         revision: context.revision,
                         uncommitted_diff: context.uncommitted_diff,
-                        editable_path: sample_data.editable_path,
                         editable_offset_range: sample_data.editable_offset_range,
                         buffer_diagnostics: context.buffer_diagnostics,
                         future_edit_history_events: sample_data.future_edit_history_events,
@@ -2608,7 +2598,6 @@ async fn send_settled_batches(
 
                 batch.push(SubmitEditPredictionSettledBody {
                     request_id: request_id.0.to_string(),
-                    trigger,
                     settled_editable_region: can_collect_data.then_some(settled_editable_region),
                     ts_error_count_before_prediction,
                     ts_error_count_after_prediction,

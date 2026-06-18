@@ -4,10 +4,9 @@ use client::{RefreshLlmTokenListener, UserStore, test::FakeServer};
 use clock::FakeSystemClock;
 use clock::ReplicaId;
 use cloud_api_types::{
-    CreateLlmTokenResponse, EditPredictionTrigger, LlmToken, Organization,
-    OrganizationConfiguration, OrganizationEditPredictionConfiguration, OrganizationId,
-    SubmitEditPredictionSettledBatchBody, SubmitEditPredictionSettledBody,
-    SubmitEditPredictionSettledResponse,
+    CreateLlmTokenResponse, LlmToken, Organization, OrganizationConfiguration,
+    OrganizationEditPredictionConfiguration, OrganizationId, SubmitEditPredictionSettledBatchBody,
+    SubmitEditPredictionSettledBody, SubmitEditPredictionSettledResponse,
 };
 use cloud_llm_client::{
     EditPredictionRejectReason, EditPredictionRejection, PredictEditsRequestTrigger,
@@ -562,7 +561,6 @@ async fn test_zeta_request_sends_settled_body_when_data_collection_is_disabled(
         .now_or_never()
         .flatten()
         .expect("settled request should be sent");
-    assert_eq!(settled_request.trigger, EditPredictionTrigger::Prediction);
     assert!(!settled_request.can_collect_data);
     assert_eq!(settled_request.settled_editable_region, None);
     assert_eq!(settled_request.sample_data, None);
@@ -3877,7 +3875,6 @@ async fn test_edit_prediction_settled(cx: &mut TestAppContext) {
     ep_store.update(cx, |ep_store, cx| {
         ep_store.enqueue_settled_prediction(
             EditPredictionId("prediction-a".into()),
-            EditPredictionTrigger::Prediction,
             &project,
             &buffer,
             &snapshot_a,
@@ -3946,7 +3943,6 @@ async fn test_edit_prediction_settled(cx: &mut TestAppContext) {
     ep_store.update(cx, |ep_store, cx| {
         ep_store.enqueue_settled_prediction(
             EditPredictionId("prediction-b".into()),
-            EditPredictionTrigger::Prediction,
             &project,
             &buffer,
             &snapshot_b2,
@@ -4077,7 +4073,6 @@ async fn enqueue_sample_capture(
     ep_store.update(cx, |ep_store, cx| {
         ep_store.enqueue_settled_prediction(
             EditPredictionId(id.to_string().into()),
-            EditPredictionTrigger::Prediction,
             project,
             buffer,
             &snapshot,
@@ -4099,7 +4094,6 @@ async fn enqueue_sample_capture(
         pending_capture.can_collect_data = true;
         pending_capture.sample_data = Some(PendingPredictionCaptureSampleData {
             context_task: Task::ready(Ok(context)),
-            editable_path: snapshot.file().unwrap().path().as_std_path().into(),
             editable_offset_range: editable_offset_range.clone(),
             next_edit_cursor_offset: None,
             future_edit_history_events: Vec::new(),
@@ -4260,7 +4254,6 @@ async fn test_edit_prediction_settled_sends_sample_data_after_quiescence(cx: &mu
         sample_data.uncommitted_diff.as_deref(),
         Some("--- a/foo.md\n+++ b/foo.md\n")
     );
-    assert_eq!(sample_data.editable_path.as_ref(), Path::new("foo.md"));
     assert_eq!(sample_data.editable_offset_range, editable_offset_range);
     assert_eq!(sample_data.buffer_diagnostics.len(), 1);
     assert_eq!(sample_data.future_edit_history_events.len(), 4);

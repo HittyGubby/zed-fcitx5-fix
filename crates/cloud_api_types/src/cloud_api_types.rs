@@ -133,8 +133,6 @@ pub struct SubmitEditPredictionFeedbackBody {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct SubmitEditPredictionSettledBody {
     pub request_id: String,
-    #[serde(default)]
-    pub trigger: EditPredictionTrigger,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settled_editable_region: Option<String>,
     pub ts_error_count_before_prediction: usize,
@@ -159,7 +157,6 @@ pub struct SubmitEditPredictionSettledSampleData {
     /// This is done to avoid excessive memory usage
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uncommitted_diff: Option<String>,
-    pub editable_path: Arc<Path>,
     pub editable_offset_range: Range<usize>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub buffer_diagnostics: Vec<zeta_prompt::ActiveBufferDiagnostic>,
@@ -181,14 +178,6 @@ pub struct SubmitEditPredictionSettledBatchBody {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct SubmitEditPredictionSettledResponse {}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum EditPredictionTrigger {
-    #[default]
-    Prediction,
-    Diagnostic,
-}
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct EditPredictionRecentFile {

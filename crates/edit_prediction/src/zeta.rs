@@ -416,7 +416,6 @@ pub(crate) fn request_prediction_with_zeta(
                     .update(cx, |this, cx| {
                         this.enqueue_settled_prediction(
                             request_id.clone(),
-                            cloud_api_types::EditPredictionTrigger::Prediction,
                             &project,
                             &edited_buffer,
                             &edited_buffer_snapshot,
