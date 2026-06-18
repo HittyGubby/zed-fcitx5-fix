@@ -131,7 +131,7 @@ pub struct SubmitEditPredictionFeedbackBody {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct SubmitEditPredictionSettledBody {
+pub struct SettledEditPrediction {
     pub request_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settled_editable_region: Option<String>,
@@ -140,17 +140,17 @@ pub struct SubmitEditPredictionSettledBody {
     pub can_collect_data: bool,
     pub is_in_open_source_repo: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub sample_data: Option<SubmitEditPredictionSettledSampleData>,
+    pub sample_data: Option<SettledEditPredictionSampleData>,
     #[serde(flatten)]
     pub kept_chars: EditPredictionSettledKeptChars,
     pub example: Option<serde_json::Value>,
     pub model_version: Option<String>,
     #[serde(rename = "e2e_latency")]
-    pub e2e_latency_ms: u128,
+    pub e2e_latency_ms: u64,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct SubmitEditPredictionSettledSampleData {
+pub struct SettledEditPredictionSampleData {
     pub repository_url: Option<String>,
     pub revision: Option<String>,
     /// Note: this is only the uncommitted diff for files in `edit_history`
@@ -173,7 +173,7 @@ pub const MAX_EDIT_PREDICTION_SETTLED_PER_REQUEST: usize = 32;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct SubmitEditPredictionSettledBatchBody {
-    pub predictions: Vec<SubmitEditPredictionSettledBody>,
+    pub predictions: Vec<SettledEditPrediction>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

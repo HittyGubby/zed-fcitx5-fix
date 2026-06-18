@@ -5,8 +5,8 @@ use clock::FakeSystemClock;
 use clock::ReplicaId;
 use cloud_api_types::{
     CreateLlmTokenResponse, LlmToken, Organization, OrganizationConfiguration,
-    OrganizationEditPredictionConfiguration, OrganizationId, SubmitEditPredictionSettledBatchBody,
-    SubmitEditPredictionSettledBody, SubmitEditPredictionSettledResponse,
+    OrganizationEditPredictionConfiguration, OrganizationId, SettledEditPrediction,
+    SubmitEditPredictionSettledBatchBody, SubmitEditPredictionSettledResponse,
 };
 use cloud_llm_client::{
     EditPredictionRejectReason, EditPredictionRejection, PredictEditsRequestTrigger,
@@ -2904,7 +2904,7 @@ struct RequestChannels {
         oneshot::Sender<PredictEditsV3Response>,
     )>,
     reject: mpsc::UnboundedReceiver<(RejectEditPredictionsBody, oneshot::Sender<()>)>,
-    settled: mpsc::UnboundedReceiver<SubmitEditPredictionSettledBody>,
+    settled: mpsc::UnboundedReceiver<SettledEditPrediction>,
 }
 
 fn init_test_with_fake_client(

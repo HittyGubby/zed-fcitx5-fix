@@ -3,7 +3,7 @@ use crate::{
     data_collection::{compute_uncommitted_diff, uncommitted_diffs_for_events},
     zeta,
 };
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 use gpui::{Context, Entity, Task};
 use language::{Buffer, Point, ToPoint as _};
 use project::Project;
@@ -33,29 +33,37 @@ pub(crate) fn capture_prediction_context(
         uncommitted_diffs_for_events(project, worktree_id, stored_events, cx);
 
     Some(cx.spawn(async move |_this, cx| {
-        let uncommitted_diff_snapshot = uncommitted_diff_task
-            .await
-            .map_err(|error| anyhow::anyhow!("{error:?}"))
-            .context("failed to capture uncommitted diff")?;
+        let uncommitted_diff_snapshot = match uncommitted_diff_task.await {
+            Ok(snapshot) => Some(snapshot),
+            Err(error) => {
+                log::debug!("failed to capture uncommitted diff: {error:?}");
+                None
+            }
+        };
 
-        let estimated_uncommitted_diff_size = uncommitted_diff_snapshot
-            .iter()
-            .map(|(_, buffer_snapshot, diff_snapshot)| {
-                diff_snapshot
-                    .hunks(buffer_snapshot)
-                    .map(|hunk| {
-                        hunk.diff_base_byte_range.len()
-                            + hunk.range.to_offset(buffer_snapshot).len()
-                    })
-                    .sum::<usize>()
-            })
-            .sum::<usize>();
-        let uncommitted_diff = if estimated_uncommitted_diff_size <= MAX_UNCOMMITTED_DIFF_SIZE {
-            let uncommitted_diff = cx
-                .background_executor()
-                .spawn(async move { compute_uncommitted_diff(uncommitted_diff_snapshot) })
-                .await;
-            (uncommitted_diff.len() <= MAX_UNCOMMITTED_DIFF_SIZE).then_some(uncommitted_diff)
+        let uncommitted_diff = if let Some(uncommitted_diff_snapshot) = uncommitted_diff_snapshot {
+            let estimated_uncommitted_diff_size = uncommitted_diff_snapshot
+                .iter()
+                .map(|(_, buffer_snapshot, diff_snapshot)| {
+                    diff_snapshot
+                        .hunks(buffer_snapshot)
+                        .map(|hunk| {
+                            hunk.diff_base_byte_range.len()
+                                + hunk.range.to_offset(buffer_snapshot).len()
+                        })
+                        .sum::<usize>()
+                })
+                .sum::<usize>();
+
+            if estimated_uncommitted_diff_size <= MAX_UNCOMMITTED_DIFF_SIZE {
+                let uncommitted_diff = cx
+                    .background_executor()
+                    .spawn(async move { compute_uncommitted_diff(uncommitted_diff_snapshot) })
+                    .await;
+                (uncommitted_diff.len() <= MAX_UNCOMMITTED_DIFF_SIZE).then_some(uncommitted_diff)
+            } else {
+                None
+            }
         } else {
             None
         };

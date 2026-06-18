@@ -4,9 +4,9 @@ use client::{Client, EditPredictionUsage, UserStore, global_llm_token};
 use cloud_api_client::LlmApiToken;
 use cloud_api_types::{
     EditPredictionRecentFile, EditPredictionSettledKeptChars,
-    MAX_EDIT_PREDICTION_SETTLED_PER_REQUEST, OrganizationId, SubmitEditPredictionFeedbackBody,
-    SubmitEditPredictionSettledBatchBody, SubmitEditPredictionSettledBody,
-    SubmitEditPredictionSettledResponse, SubmitEditPredictionSettledSampleData,
+    MAX_EDIT_PREDICTION_SETTLED_PER_REQUEST, OrganizationId, SettledEditPrediction,
+    SettledEditPredictionSampleData, SubmitEditPredictionFeedbackBody,
+    SubmitEditPredictionSettledBatchBody, SubmitEditPredictionSettledResponse,
 };
 use cloud_llm_client::predict_edits_v3::{
     PREDICT_EDITS_MODE_HEADER_NAME, PREDICT_EDITS_REQUEST_ID_HEADER_NAME,
@@ -2574,7 +2574,7 @@ async fn send_settled_batches(
                     && let Some(sample_data) = sample_data
                     && let Ok(context) = sample_data.context_task.await
                 {
-                    Some(SubmitEditPredictionSettledSampleData {
+                    Some(SettledEditPredictionSampleData {
                         repository_url: context.repository_url,
                         revision: context.revision,
                         uncommitted_diff: context.uncommitted_diff,
@@ -2596,7 +2596,7 @@ async fn send_settled_batches(
                     None
                 };
 
-                batch.push(SubmitEditPredictionSettledBody {
+                batch.push(SettledEditPrediction {
                     request_id: request_id.0.to_string(),
                     settled_editable_region: can_collect_data.then_some(settled_editable_region),
                     ts_error_count_before_prediction,
@@ -2618,7 +2618,7 @@ async fn send_settled_batches(
                     },
                     example: None,
                     model_version,
-                    e2e_latency_ms: e2e_latency.as_millis(),
+                    e2e_latency_ms: e2e_latency.as_millis().min(u128::from(u64::MAX)) as u64,
                 });
             }
 
